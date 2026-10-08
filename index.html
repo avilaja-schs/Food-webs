@@ -105,6 +105,41 @@ main { grid-area: main; display: flex; flex-direction: column; gap: 14px; min-wi
 .head-tools .speak { margin-left: 0; }
 .btn.show-me { background: var(--path); border-color: var(--path); color: #fff; }
 
+/* Energy transfer chart (like the notebook table: level 6 on top, producers at the bottom) */
+.egrid-wrap { display: flex; gap: 14px; align-items: stretch; flex-wrap: wrap; }
+.egrid { border-collapse: collapse; font-size: 1rem; }
+.egrid th, .egrid td { border: 2px solid var(--line); padding: 6px 10px; }
+.egrid thead th { background: var(--chip); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.egrid thead th:last-child, .egrid td.tag { border: 0; background: transparent; padding-left: 4px; }
+.egrid tbody th { text-align: left; min-width: 7.5rem; }
+.egrid .lv-big { font-family: var(--font-num); font-size: 1.25rem; font-weight: 700; margin-right: 8px; }
+.egrid .lv-small { font-size: 0.8rem; color: var(--muted); }
+.egrid input { font: inherit; font-family: var(--font-num); font-size: 1.1rem; width: 11rem; padding: 6px 8px; border: 2px solid var(--line);
+  border-radius: 6px; background: var(--bg); color: var(--ink); text-align: right; min-height: 42px; }
+.egrid tr.given input { background: var(--chip); font-weight: 700; border-color: var(--accent); }
+.egrid tr.ask input { border-color: var(--cover); border-width: 3px; background: var(--surface); }
+.egrid tr.ask th { background: var(--cover); color: var(--cover-ink); }
+.egrid tr.ask th .lv-small { color: var(--cover-ink); }
+.egrid tr input.ok { border-color: var(--good); background: var(--good-bg); }   /* (beats the orange answer-box style) */
+.egrid tr input.bad { border-color: var(--bad); background: var(--bad-bg); }
+.chip-given, .chip-ask { font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip-given { background: var(--chip); color: var(--accent); border: 1px solid var(--accent); }
+.chip-ask { background: var(--cover); color: var(--cover-ink); }
+.e-rule { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; padding: 34px 0 4px; }
+.e-rule > div { display: flex; flex-direction: column; align-items: center; background: var(--chip); border-radius: 10px; padding: 8px 12px; font-family: var(--font-num); font-weight: 700; }
+.e-rule small { font-family: var(--font-body); font-weight: 500; color: var(--muted); font-size: 0.75rem; }
+.e-arrow { font-size: 1.6rem; line-height: 1; color: var(--path); }
+.e-dec { font-size: 1rem; white-space: nowrap; } .e-dec b { color: var(--path); }
+.e-rule > div { max-width: 9rem; text-align: center; }
+.egrid.scratch input { width: 100%; min-width: 7rem; font-size: 1rem; min-height: 38px; }
+.egrid.scratch th { padding: 4px 8px; }
+.egrid.scratch td { padding: 4px 6px; }
+@media (max-width: 520px) {
+  .egrid input { width: 8.5rem; } .egrid tbody th { min-width: 5.5rem; }
+  .egrid td.tag, .egrid thead th:last-child { display: none; }   /* row color already marks given / answer */
+  .e-rule { flex-direction: row; padding: 0; }
+}
+
 /* Result pop-up */
 .pop-back { position: fixed; inset: 0; z-index: 40; background: rgba(8, 24, 30, 0.45); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .pop { background: var(--surface); color: var(--ink); border-radius: 16px; border: 4px solid var(--line); max-width: 440px; width: 100%;
@@ -269,6 +304,7 @@ footer a { color: var(--accent); word-break: break-all; }
     <div class="ctrl"><span class="ctrl-label" id="t-qtype"></span>
       <div class="seg" id="seg-qtype">
         <button type="button" data-qtype="level" id="q-level"></button>
+        <button type="button" data-qtype="energy" id="q-energy"></button>
         <button type="button" data-qtype="cal" id="q-cal"></button>
         <button type="button" data-qtype="diet" id="q-diet"></button>
       </div>
@@ -299,6 +335,14 @@ footer a { color: var(--accent); word-break: break-all; }
     <section class="tool key" id="key-card" aria-labelledby="t-keytitle" hidden>
       <h2 id="t-keytitle"></h2>
       <div id="key-body"></div>
+    </section>
+    <!-- Scratch chart: a helper for "Food web energy transfer" questions. Not graded. -->
+    <section class="tool" id="scratch-card" aria-labelledby="t-scratch" hidden>
+      <h2 id="t-scratch"></h2>
+      <p class="calc-tip" id="t-scratchtip" style="margin:0 0 8px"></p>
+      <table class="egrid scratch"><tbody id="scratch-body"></tbody></table>
+      <p class="calc-tip" id="t-scratchrule"></p>
+      <button type="button" class="btn ghost small" id="scratch-clear" style="margin-top:6px"></button>
     </section>
     <section class="tool" id="calc-card" aria-labelledby="t-calc" hidden>
       <h2 id="t-calc"></h2>
@@ -742,7 +786,20 @@ const T = {
   en: {
     tagline: "Start at the highlighted organism and count backward against the arrows to a producer (level 0).",
     mode: "Mode", practice: "Practice", test: "Test",
-    qtype: "Question", qLevel: "Trophic level", qCal: "Calories", qDiet: "Diet type",
+    qtype: "Question", qLevel: "Food web", qCal: "Food web energy transfer", qDiet: "Diet type", qEnergy: "Energy transfer", eDiff: "Difficulty", scratch: "Scratch chart", scratchTip: "Use this chart to help you work it out. It is not graded — type your answer in the answer box.", scratchRule: "Going UP a level: move the decimal 1 place LEFT. Going DOWN: 1 place RIGHT.", scratchClear: "Clear chart",
+    eUp: "The producers have {n} calories. How many of those calories make it to the {lvl}?",
+    eDownProd: "The {lvl} got {n} calories. How many calories came from the producers?",
+    eDown: "The {lvl} got {n} calories. How many calories came from the {lvl2}?",
+    eSub: "Fill in the chart. Only 10% moves UP each level: move the decimal 1 place to the LEFT. Going DOWN a level: move the decimal 1 place to the RIGHT. Put your answer in the orange box.",
+    eGiven: "given", eYourAnswer: "your answer", eUpWord: "going up: decimal 1 place LEFT", eDownWord: "going down: decimal 1 place RIGHT",
+    eCheck: "Check answer", eAnother: "Another problem", eBack: "Back to the chart",
+    eTryTitle: "Try again", eTryAgain: "Try again", eShowAnswer: "Show me the answer",
+    eNeedAnswer: "Type your answer in the orange box first.",
+    eHintOtherLevel: "That number belongs to the {lvl}. The question asks about the {ask}.",
+    eHintSame: "That's the number you started with. Move up or down the chart to the orange box.",
+    eHintGeneral: "Count the levels between the given box and the orange box. Move the decimal one place for each level: LEFT going up, RIGHT going down.",
+    eExplLevels: "From level {a} to level {b} is {k} level(s).",
+    eShownNote: "Here is the answer, filled in on the chart. Try another problem!",
     diff: "Food web size", easy: "Easy", medium: "Medium", hard: "Hard",
     lang: "Language", help: "Help", key: "Vocabulary key",
     newQ: "New food web", next: "Next food web", read: "Read aloud",
@@ -753,10 +810,10 @@ const T = {
     streakNow: "Streak: {n} of 2 in a row.",
     levelQ: "What level is the {o}?",
     levelSub: "Start at the {o}. Count backward against the arrows until you reach a producer. Use the highest possible level.",
-    calUpProd: "The {a} made {n} calories. How many calories does the {o} get?",
-    calUp: "The {a} got {n} calories. How many calories does the {o} get?",
-    calDownProd: "The {o} got {n} calories. How many calories did the {a} make?",
-    calDown: "The {o} got {n} calories. How many calories did the {a} have?",
+    calUpProd: "The {a} is a {lvl} and made {n} calories. How many calories does the {o} get?",
+    calUp: "The {a} is a {lvl} and got {n} calories. How many calories does the {o} get?",
+    calDownProd: "The {o} is a {lvl} and got {n} calories. How many calories did the {a} make?",
+    calDown: "The {o} is a {lvl} and got {n} calories. How many calories did the {a} have?",
     calSub: "Only 10% of the energy moves up each level. Use the highest possible level for each organism.",
     dietQ: "In this food web, what kind of eater is the {o}?",
     dietSub: "Look at every arrow that points INTO the {o}. Those are the things it eats.",
@@ -767,7 +824,7 @@ const T = {
     tooLow: "Too low. Is there a LONGER way back to a producer?", tooHigh: "Too high. Count the arrows again, starting at the {o}.",
     calOtherOrg: "{n} is what the {x} had. The question asks about the {a}. Stop when you reach the {a}.",
     calShortPath: "That answer treats the {x} as level {lo}. Use its HIGHEST level: {hi}.",
-    hintCal: "How many levels apart are the two organisms? Going up a level: ÷ 10. Going down a level: × 10.",
+    hintCal: "How many levels apart are the two organisms? Move the decimal one place for each level: LEFT going up, RIGHT going down.",
     hintDiet: "Check every arrow that points into the {o}. Does it eat producers, animals, or both?",
     needNum: "Type a number first.",
     explTitle: "How to get the answer",
@@ -775,23 +832,23 @@ const T = {
     isLevel: "So the {o} is a {lvl}.",
     shorter: "Careful: a shorter way back ({n} arrows) also exists: {chain}. Always use the HIGHEST level.",
     calLevels: "{a} is level {la}. {o} is level {lo}. That is {k} level(s) apart.",
-    calUpWork: "Going up {k} level(s): divide by 10 {k} time(s).",
-    calDownWork: "Going down {k} level(s): multiply by 10 {k} time(s).",
+    calUpWork: "Going up {k} level(s): move the decimal {k} place(s) to the LEFT.",
+    calDownWork: "Going down {k} level(s): move the decimal {k} place(s) to the RIGHT.",
     level: "Level", organism: "Organism", cal: "Calories",
     eats: "The {o} eats:", eatsNothing: "No arrows point into the {o}. It makes its own food.",
     dietIsP: "So the {o} is a Producer.", dietIsH: "It eats only producers, so it is an Herbivore.",
     dietIsC: "It eats only animals, so it is a Carnivore.", dietIsO: "It eats producers AND animals, so it is an Omnivore.",
     tagProducer: "producer", tagAnimal: "animal",
-    testIntro: "Test: answer 2 in a row correctly on the first try to pass.",
-    streak: "Streak:", pass: "2 in a row. You passed!", newTest: "Start a new test",
-    testMiss: "That one did not count. Your streak starts over.",
+    testIntro: "Test: get one question right on the first try to pass.",
+    streak: "Streak:", pass: "Right on the first try. You passed!", newTest: "Start a new test",
+    testMiss: "That one did not count. Try another one.",
     trace: "Trace tool", traceOff: "Stop tracing", undo: "Undo", clear: "Clear",
     traceStart: "Tap something the {o} eats (an organism with an arrow pointing INTO the {o}).",
     traceStep: "{n} arrow(s) back so far. Now tap something the {c} eats.",
     traceDone: "You reached a producer: {n} arrow(s) back. Is there a LONGER way?",
     traceBad: "The {c} does not eat the {x}. There is no arrow from the {x} to the {c}.",
     scrollTip: "Swipe sideways to see the whole food web.",
-    calc: "Calculator", use: "Use result", useTip: "“Use result” puts the number in the answer box.",
+    calc: "Calculator", use: "Use result", useTip: "“Use result” puts the number in the box you clicked last.",
     keyTitle: "Vocabulary key", keyOff: "The vocabulary key is hidden during a test.",
     keyArrow: "The arrow points to the EATER. It shows which way energy moves.",
     keyRule: "10% rule: each level gets only 10% of the energy of the level below it.",
@@ -807,7 +864,20 @@ const T = {
   es: {
     tagline: "Empieza en el organismo resaltado y cuenta hacia atrás, contra las flechas, hasta llegar a un productor (nivel 0).",
     mode: "Modo", practice: "Práctica", test: "Examen",
-    qtype: "Pregunta", qLevel: "Nivel trófico", qCal: "Calorías", qDiet: "Tipo de dieta",
+    qtype: "Pregunta", qLevel: "Red alimentaria", qCal: "Energía en la red alimentaria", qDiet: "Tipo de dieta", qEnergy: "Transferencia de energía", eDiff: "Dificultad", scratch: "Tabla de apoyo", scratchTip: "Usa esta tabla para ayudarte. No se califica: escribe tu respuesta en la casilla de respuesta.", scratchRule: "Al SUBIR un nivel: mueve el punto decimal 1 lugar a la IZQUIERDA. Al BAJAR: 1 lugar a la DERECHA.", scratchClear: "Borrar tabla",
+    eUp: "Los productores tienen {n} calorías. ¿Cuántas de esas calorías llegan al {lvl}?",
+    eDownProd: "El {lvl} recibió {n} calorías. ¿Cuántas calorías vinieron de los productores?",
+    eDown: "El {lvl} recibió {n} calorías. ¿Cuántas calorías vinieron del {lvl2}?",
+    eSub: "Completa la tabla. Solo el 10% SUBE cada nivel: mueve el punto decimal 1 lugar a la IZQUIERDA. Al BAJAR un nivel: mueve el punto decimal 1 lugar a la DERECHA. Escribe tu respuesta en la casilla naranja.",
+    eGiven: "dato", eYourAnswer: "tu respuesta", eUpWord: "subir: decimal 1 lugar a la IZQUIERDA", eDownWord: "bajar: decimal 1 lugar a la DERECHA",
+    eCheck: "Revisar respuesta", eAnother: "Otro problema", eBack: "Volver a la tabla",
+    eTryTitle: "Inténtalo otra vez", eTryAgain: "Intentar otra vez", eShowAnswer: "Muéstrame la respuesta",
+    eNeedAnswer: "Primero escribe tu respuesta en la casilla naranja.",
+    eHintOtherLevel: "Ese número es del {lvl}. La pregunta es sobre el {ask}.",
+    eHintSame: "Ese es el número con el que empezaste. Sube o baja en la tabla hasta la casilla naranja.",
+    eHintGeneral: "Cuenta los niveles entre el dato y la casilla naranja. Mueve el punto decimal un lugar por cada nivel: a la IZQUIERDA al subir, a la DERECHA al bajar.",
+    eExplLevels: "Del nivel {a} al nivel {b} hay {k} nivel(es).",
+    eShownNote: "Aquí está la respuesta en la tabla. ¡Intenta otro problema!",
     diff: "Tamaño de la red", easy: "Fácil", medium: "Medio", hard: "Difícil",
     lang: "Idioma", help: "Ayuda", key: "Vocabulario",
     newQ: "Nueva red", next: "Siguiente red", read: "Leer en voz alta",
@@ -818,10 +888,10 @@ const T = {
     streakNow: "Racha: {n} de 2 seguidas.",
     levelQ: "¿De qué nivel es el organismo {o}?",
     levelSub: "Empieza en {o}. Cuenta hacia atrás, contra las flechas, hasta llegar a un productor. Usa el nivel más alto posible.",
-    calUpProd: "El organismo {a} produjo {n} calorías. ¿Cuántas calorías recibe el organismo {o}?",
-    calUp: "El organismo {a} recibió {n} calorías. ¿Cuántas calorías recibe el organismo {o}?",
-    calDownProd: "El organismo {o} recibió {n} calorías. ¿Cuántas calorías produjo el organismo {a}?",
-    calDown: "El organismo {o} recibió {n} calorías. ¿Cuántas calorías tenía el organismo {a}?",
+    calUpProd: "El organismo {a} es un {lvl} y produjo {n} calorías. ¿Cuántas calorías recibe el organismo {o}?",
+    calUp: "El organismo {a} es un {lvl} y recibió {n} calorías. ¿Cuántas calorías recibe el organismo {o}?",
+    calDownProd: "El organismo {o} es un {lvl} y recibió {n} calorías. ¿Cuántas calorías produjo el organismo {a}?",
+    calDown: "El organismo {o} es un {lvl} y recibió {n} calorías. ¿Cuántas calorías tenía el organismo {a}?",
     calSub: "Solo el 10% de la energía sube a cada nivel. Usa el nivel más alto posible de cada organismo.",
     dietQ: "En esta red alimentaria, ¿qué tipo de consumidor es el organismo {o}?",
     dietSub: "Mira todas las flechas que apuntan HACIA {o}. Eso es lo que come.",
@@ -832,7 +902,7 @@ const T = {
     tooLow: "Muy bajo. ¿Hay un camino MÁS LARGO hasta un productor?", tooHigh: "Muy alto. Cuenta las flechas otra vez, empezando en {o}.",
     calOtherOrg: "{n} es lo que tenía {x}. La pregunta es sobre {a}. Detente cuando llegues a {a}.",
     calShortPath: "Esa respuesta usa {x} como nivel {lo}. Usa su nivel MÁS ALTO: {hi}.",
-    hintCal: "¿Cuántos niveles hay entre los dos organismos? Subir un nivel: ÷ 10. Bajar un nivel: × 10.",
+    hintCal: "¿Cuántos niveles hay entre los dos organismos? Mueve el punto decimal un lugar por cada nivel: a la IZQUIERDA al subir, a la DERECHA al bajar.",
     hintDiet: "Revisa todas las flechas que apuntan hacia {o}. ¿Come productores, animales o ambos?",
     needNum: "Primero escribe un número.",
     explTitle: "Cómo encontrar la respuesta",
@@ -840,23 +910,23 @@ const T = {
     isLevel: "Entonces {o} es un {lvl}.",
     shorter: "Cuidado: también hay un camino más corto ({n} flechas): {chain}. Usa siempre el nivel MÁS ALTO.",
     calLevels: "{a} es nivel {la}. {o} es nivel {lo}. Hay {k} nivel(es) de diferencia.",
-    calUpWork: "Subir {k} nivel(es): divide entre 10, {k} vez/veces.",
-    calDownWork: "Bajar {k} nivel(es): multiplica por 10, {k} vez/veces.",
+    calUpWork: "Subir {k} nivel(es): mueve el punto decimal {k} lugar(es) a la IZQUIERDA.",
+    calDownWork: "Bajar {k} nivel(es): mueve el punto decimal {k} lugar(es) a la DERECHA.",
     level: "Nivel", organism: "Organismo", cal: "Calorías",
     eats: "{o} come:", eatsNothing: "Ninguna flecha apunta hacia {o}. Hace su propio alimento.",
     dietIsP: "Entonces {o} es un Productor.", dietIsH: "Come solo productores, así que es Herbívoro.",
     dietIsC: "Come solo animales, así que es Carnívoro.", dietIsO: "Come productores Y animales, así que es Omnívoro.",
     tagProducer: "productor", tagAnimal: "animal",
-    testIntro: "Examen: responde 2 seguidas correctamente al primer intento para aprobar.",
-    streak: "Racha:", pass: "¡2 seguidas! ¡Aprobaste!", newTest: "Empezar un nuevo examen",
-    testMiss: "Esa no contó. Tu racha empieza de nuevo.",
+    testIntro: "Examen: responde una pregunta bien al primer intento para aprobar.",
+    streak: "Racha:", pass: "¡Correcto al primer intento! ¡Aprobaste!", newTest: "Empezar un nuevo examen",
+    testMiss: "Esa no contó. Intenta otra.",
     trace: "Herramienta de rastreo", traceOff: "Dejar de rastrear", undo: "Deshacer", clear: "Borrar",
     traceStart: "Toca algo que come {o} (un organismo con una flecha que apunta HACIA {o}).",
     traceStep: "Llevas {n} flecha(s) hacia atrás. Ahora toca algo que come {c}.",
     traceDone: "Llegaste a un productor: {n} flecha(s) hacia atrás. ¿Hay un camino MÁS LARGO?",
     traceBad: "{c} no come {x}. No hay flecha de {x} a {c}.",
     scrollTip: "Desliza hacia los lados para ver toda la red.",
-    calc: "Calculadora", use: "Usar resultado", useTip: "“Usar resultado” pone el número en la casilla de respuesta.",
+    calc: "Calculadora", use: "Usar resultado", useTip: "“Usar resultado” pone el número en la última casilla que tocaste.",
     keyTitle: "Vocabulario", keyOff: "El vocabulario está oculto durante el examen.",
     keyArrow: "La flecha apunta al que COME. Muestra hacia dónde va la energía.",
     keyRule: "Regla del 10%: cada nivel recibe solo el 10% de la energía del nivel de abajo.",
@@ -872,7 +942,20 @@ const T = {
   vi: {
     tagline: "Bắt đầu từ sinh vật được tô màu và đếm ngược chiều mũi tên cho đến sinh vật sản xuất (bậc 0).",
     mode: "Chế độ", practice: "Luyện tập", test: "Kiểm tra",
-    qtype: "Câu hỏi", qLevel: "Bậc dinh dưỡng", qCal: "Calo", qDiet: "Kiểu ăn",
+    qtype: "Câu hỏi", qLevel: "Lưới thức ăn", qCal: "Năng lượng trong lưới thức ăn", qDiet: "Kiểu ăn", qEnergy: "Truyền năng lượng", eDiff: "Độ khó", scratch: "Bảng nháp", scratchTip: "Dùng bảng này để giúp em tính. Bảng không được chấm — hãy ghi đáp án vào ô đáp án.", scratchRule: "Đi LÊN một bậc: dời dấu thập phân 1 chỗ sang TRÁI. Đi XUỐNG: 1 chỗ sang PHẢI.", scratchClear: "Xóa bảng",
+    eUp: "Sinh vật sản xuất có {n} calo. Bao nhiêu calo trong số đó đến được {lvl}?",
+    eDownProd: "{lvl} nhận được {n} calo. Bao nhiêu calo đến từ sinh vật sản xuất?",
+    eDown: "{lvl} nhận được {n} calo. Bao nhiêu calo đến từ {lvl2}?",
+    eSub: "Điền vào bảng. Chỉ 10% đi LÊN mỗi bậc: dời dấu thập phân 1 chỗ sang TRÁI. Đi XUỐNG một bậc: dời dấu thập phân 1 chỗ sang PHẢI. Ghi đáp án vào ô màu cam.",
+    eGiven: "đã cho", eYourAnswer: "đáp án", eUpWord: "đi lên: dấu thập phân sang TRÁI 1 chỗ", eDownWord: "đi xuống: dấu thập phân sang PHẢI 1 chỗ",
+    eCheck: "Chấm bài", eAnother: "Bài khác", eBack: "Quay lại bảng",
+    eTryTitle: "Thử lại nhé", eTryAgain: "Thử lại", eShowAnswer: "Cho em xem đáp án",
+    eNeedAnswer: "Hãy ghi đáp án vào ô màu cam trước.",
+    eHintOtherLevel: "Số đó thuộc về {lvl}. Câu hỏi hỏi về {ask}.",
+    eHintSame: "Đó là số em bắt đầu. Hãy đi lên hoặc xuống bảng đến ô màu cam.",
+    eHintGeneral: "Đếm số bậc giữa ô đã cho và ô màu cam. Mỗi bậc dời dấu thập phân một chỗ: sang TRÁI khi đi lên, sang PHẢI khi đi xuống.",
+    eExplLevels: "Từ bậc {a} đến bậc {b} là {k} bậc.",
+    eShownNote: "Đây là đáp án trên bảng. Hãy thử bài khác!",
     diff: "Độ lớn lưới thức ăn", easy: "Dễ", medium: "Vừa", hard: "Khó",
     lang: "Ngôn ngữ", help: "Trợ giúp", key: "Từ vựng",
     newQ: "Lưới thức ăn mới", next: "Lưới tiếp theo", read: "Đọc to",
@@ -883,10 +966,10 @@ const T = {
     streakNow: "Chuỗi đúng: {n}/2 liên tiếp.",
     levelQ: "{o} thuộc bậc nào?",
     levelSub: "Bắt đầu từ {o}. Đếm ngược chiều mũi tên cho đến khi gặp sinh vật sản xuất. Dùng bậc cao nhất có thể.",
-    calUpProd: "{a} tạo ra {n} calo. {o} nhận được bao nhiêu calo?",
-    calUp: "{a} nhận được {n} calo. {o} nhận được bao nhiêu calo?",
-    calDownProd: "{o} nhận được {n} calo. {a} đã tạo ra bao nhiêu calo?",
-    calDown: "{o} nhận được {n} calo. {a} đã có bao nhiêu calo?",
+    calUpProd: "{a} là {lvl} và tạo ra {n} calo. {o} nhận được bao nhiêu calo?",
+    calUp: "{a} là {lvl} và nhận được {n} calo. {o} nhận được bao nhiêu calo?",
+    calDownProd: "{o} là {lvl} và nhận được {n} calo. {a} đã tạo ra bao nhiêu calo?",
+    calDown: "{o} là {lvl} và nhận được {n} calo. {a} đã có bao nhiêu calo?",
     calSub: "Chỉ 10% năng lượng được chuyển lên mỗi bậc. Dùng bậc cao nhất có thể của mỗi sinh vật.",
     dietQ: "Trong lưới thức ăn này, {o} thuộc kiểu ăn nào?",
     dietSub: "Hãy nhìn mọi mũi tên chỉ VÀO {o}. Đó là những thứ nó ăn.",
@@ -897,7 +980,7 @@ const T = {
     tooLow: "Thấp quá. Có đường nào DÀI HƠN về sinh vật sản xuất không?", tooHigh: "Cao quá. Hãy đếm lại các mũi tên, bắt đầu từ {o}.",
     calOtherOrg: "{n} là số calo của {x}. Câu hỏi hỏi về {a}. Hãy dừng lại khi đến {a}.",
     calShortPath: "Đáp án đó coi {x} ở bậc {lo}. Hãy dùng bậc CAO NHẤT của nó: {hi}.",
-    hintCal: "Hai sinh vật cách nhau mấy bậc? Lên một bậc: ÷ 10. Xuống một bậc: × 10.",
+    hintCal: "Hai sinh vật cách nhau mấy bậc? Mỗi bậc dời dấu thập phân một chỗ: sang TRÁI khi đi lên, sang PHẢI khi đi xuống.",
     hintDiet: "Hãy xem mọi mũi tên chỉ vào {o}. Nó ăn sinh vật sản xuất, động vật, hay cả hai?",
     needNum: "Hãy nhập một số trước.",
     explTitle: "Cách tìm đáp án",
@@ -905,23 +988,23 @@ const T = {
     isLevel: "Vậy {o} là {lvl}.",
     shorter: "Cẩn thận: cũng có đường ngắn hơn ({n} mũi tên): {chain}. Luôn dùng bậc CAO NHẤT.",
     calLevels: "{a} ở bậc {la}. {o} ở bậc {lo}. Cách nhau {k} bậc.",
-    calUpWork: "Đi lên {k} bậc: chia cho 10, {k} lần.",
-    calDownWork: "Đi xuống {k} bậc: nhân với 10, {k} lần.",
+    calUpWork: "Đi lên {k} bậc: dời dấu thập phân {k} chỗ sang TRÁI.",
+    calDownWork: "Đi xuống {k} bậc: dời dấu thập phân {k} chỗ sang PHẢI.",
     level: "Bậc", organism: "Sinh vật", cal: "Calo",
     eats: "{o} ăn:", eatsNothing: "Không có mũi tên nào chỉ vào {o}. Nó tự tạo thức ăn.",
     dietIsP: "Vậy {o} là sinh vật sản xuất.", dietIsH: "Nó chỉ ăn sinh vật sản xuất, nên nó ăn thực vật.",
     dietIsC: "Nó chỉ ăn động vật, nên nó ăn thịt.", dietIsO: "Nó ăn cả sinh vật sản xuất VÀ động vật, nên nó ăn tạp.",
     tagProducer: "SV sản xuất", tagAnimal: "động vật",
-    testIntro: "Kiểm tra: trả lời đúng 2 câu liên tiếp ngay lần đầu để đạt.",
-    streak: "Chuỗi đúng:", pass: "Đúng 2 câu liên tiếp. Em đã đạt!", newTest: "Làm bài kiểm tra mới",
-    testMiss: "Câu này không được tính. Chuỗi đúng bắt đầu lại.",
+    testIntro: "Kiểm tra: trả lời đúng một câu ngay lần đầu để đạt.",
+    streak: "Chuỗi đúng:", pass: "Đúng ngay lần đầu. Em đã đạt!", newTest: "Làm bài kiểm tra mới",
+    testMiss: "Câu này không được tính. Hãy thử câu khác.",
     trace: "Công cụ dò đường", traceOff: "Dừng dò", undo: "Hoàn tác", clear: "Xóa",
     traceStart: "Chạm vào thứ mà {o} ăn (sinh vật có mũi tên chỉ VÀO {o}).",
     traceStep: "Đã lùi {n} mũi tên. Giờ chạm vào thứ mà {c} ăn.",
     traceDone: "Em đã đến sinh vật sản xuất: lùi {n} mũi tên. Có đường nào DÀI HƠN không?",
     traceBad: "{c} không ăn {x}. Không có mũi tên từ {x} đến {c}.",
     scrollTip: "Vuốt sang ngang để xem cả lưới thức ăn.",
-    calc: "Máy tính", use: "Dùng kết quả", useTip: "“Dùng kết quả” đưa số vào ô đáp án.",
+    calc: "Máy tính", use: "Dùng kết quả", useTip: "“Dùng kết quả” đưa số vào ô em bấm gần nhất.",
     keyTitle: "Từ vựng", keyOff: "Phần từ vựng bị ẩn khi kiểm tra.",
     keyArrow: "Mũi tên chỉ về con ĂN. Nó cho thấy năng lượng đi theo hướng nào.",
     keyRule: "Quy tắc 10%: mỗi bậc chỉ nhận 10% năng lượng của bậc bên dưới.",
@@ -941,11 +1024,276 @@ function ordinalEn(n) {
 }
 
 /* =====================================================================
+   ENERGY TRANSFER PROBLEMS (the "Energy transfer" question button)
+   No food web picture here: students get a chart of levels 0–6 like the
+   one in their notebook. One number is given; they fill in the chart using
+   the 10% rule and type the answer in the orange box.
+     up       : producer (level 0) has N calories → how many reach level k?
+     downProd : level k got N calories → how many came from the producers?
+     down     : level k got N calories → how many came from level j (j < k)?
+   Value at level L = given × 10^(givenLevel − L)  (up a level: decimal 1 place left; down: 1 place right)
+   ===================================================================== */
+const E_ROWS = 6;                                   // chart shows levels 0..6 (like the notebook)
+const E_UP_START = [1000, 2000, 3000, 4820, 5000, 10000, 20000, 37000, 50000, 100000, 250000, 1000000];
+const E_DOWN_START = [0.1, 0.2, 0.5, 1, 2, 3.7, 5, 7.5, 10, 37, 48.2, 50, 75, 230, 750];
+
+function eRound(x) { return Number(x.toPrecision(12)); }
+function eValueAt(q, L) { return eRound(q.given * 10 ** (q.givenLevel - L)); }
+const isWhole = (x) => Math.abs(x - Math.round(x)) < 1e-9;
+
+// Decimal problems: about 45% of Medium/Hard problems (20% of Easy) use a number below 1,
+// either as the answer (0.5, 0.037, 0.0004…) or as the given number.
+const E_MIN = 0.0001;                                 // smallest answer for decimal problems (4 places)
+const E_DEC_GIVEN = [0.0003, 0.0005, 0.002, 0.004, 0.005, 0.03, 0.07, 0.2, 0.5, 0.8];
+const decPlaces = (x) => { const s = fmtNum(x); return s.includes(".") ? s.split(".")[1].length : 0; };
+
+function newEnergyQuestion() {
+  // Highest level asked: Easy 3, Medium 5, Hard 6 (tests mix Medium and Hard).
+  const diff = state.mode === "test" ? pick(["medium", "hard"]) : state.diff;
+  const maxK = diff === "easy" ? 3 : diff === "medium" ? 5 : 6;
+  const decimalMode = Math.random() < (diff === "easy" ? 0.2 : 0.45);
+  // how small a decimal answer should be: 0._ , 0.0_ , 0.00_ or 0.000_ (equal chances; Easy only 0._)
+  const place = diff === "easy" ? 1 : randInt(1, 4);
+  let q = null;
+  for (let tries = 0; tries < 400 && !q; tries++) {
+    const r = Math.random();
+    // small decimal answers (0.0_ and smaller) come from "producers have N… how many reach level k?"
+    const form = decimalMode && place >= 2 ? "up" : r < 0.4 ? "up" : r < 0.7 ? "downProd" : "down";
+    const k = randInt(form === "down" ? 2 : 1, maxK);
+    let givenLevel, askLevel, given;
+    if (form === "up") {
+      givenLevel = 0; askLevel = k;
+      // Decimal problems also start from small producer amounts (100–700) so answers like 0.0005 show up
+      const upPool = decimalMode ? [20, 50, 100, 200, 300, 400, 500, 700].concat(E_UP_START) : E_UP_START;
+      const ok = upPool.filter((v) => {
+        const ans = eRound(v / 10 ** k);
+        if (decimalMode) return ans < 10 ** -(place - 1) && ans >= 10 ** -place && (diff !== "easy" || decPlaces(ans) === 1);
+        return ans >= CAL_MIN && (diff !== "easy" || isWhole(ans));   // Easy: whole-number answers only
+      });
+      if (!ok.length) continue;
+      given = pick(ok);
+    } else {
+      givenLevel = k; askLevel = form === "downProd" ? 0 : randInt(1, k - 1);
+      const pool = decimalMode ? E_DEC_GIVEN.filter((v) => diff !== "easy" || decPlaces(v) === 1) : E_DOWN_START;
+      const ok = pool.filter((v) => v * 10 ** (k - askLevel) <= CAL_MAX && (decimalMode || diff !== "easy" || isWhole(v)));
+      if (!ok.length) continue;
+      given = pick(ok);
+    }
+    q = { type: "energy", form, givenLevel, askLevel, given, diff };
+  }
+  Object.assign(q, { answer: 0, tries: 0, firstTry: null, solved: false, done: false, revealed: false,
+                     cells: {}, marks: {}, fb: null, flash: null });
+  q.answer = eValueAt(q, q.askLevel);
+  state.q = q; state.trace = null; state.walk = null;
+  closePopup();
+  render();
+  // Start the cursor in the box right next to the given number, in the direction of the orange box
+  const next = q.givenLevel + (q.askLevel > q.givenLevel ? 1 : -1);
+  state.lastCell = next;
+  const first = $(`ecell-${next}`);
+  if (first) first.focus({ preventScroll: true });
+}
+
+// Question text (HTML version and plain version for read-aloud)
+function energyParts(q, plain) {
+  const t = tx();
+  const n = plain ? fmtNum(q.given) : `<span class="num">${fmtNum(q.given)}</span>`;
+  const lv = (L) => (plain ? t.lvlText(L) : `<span class="org">${esc(t.lvlText(L))}</span>`);
+  const lv2 = (L) => (plain ? t.lvlText(L) : `<span class="org2">${esc(t.lvlText(L))}</span>`);
+  let main;
+  if (q.form === "up") main = fill(t.eUp, { n, lvl: lv(q.askLevel) });
+  else if (q.form === "downProd") main = fill(t.eDownProd, { n, lvl: lv2(q.givenLevel) });
+  else main = fill(t.eDown, { n, lvl: lv2(q.givenLevel), lvl2: lv(q.askLevel) });
+  return [main, t.eSub];
+}
+
+function renderEnergy() {
+  const q = state.q, t = tx(), main = $("main");
+  const [qMain, qSub] = energyParts(q, false);
+  let h = "";
+  if (state.mode === "test") {
+    h += `<div class="banner ${state.passed ? "win" : ""} streak">${state.passed ? t.pass : t.testIntro}
+      ${state.passed ? `<button type="button" class="btn small" id="new-test">${t.newTest}</button>` : ""}</div>`;
+  }
+  // Chart rows from level 6 (top) down to 0 (bottom), like the notebook
+  let rows = "";
+  for (let L = E_ROWS; L >= 0; L--) {
+    const isGiven = L === q.givenLevel, isAsk = L === q.askLevel;
+    const mark = q.marks[L] || "";
+    const val = isGiven ? fmtNum(q.given) : (q.cells[L] || "");
+    rows += `<tr class="${isGiven ? "given" : ""} ${isAsk ? "ask" : ""}">
+      <th scope="row"><span class="lv-big">${L}</span><span class="lv-small">${esc(L === 0 ? t.P : t.lvlSmall(L))}</span></th>
+      <td><input id="ecell-${L}" data-level="${L}" class="ecell ${mark}" type="text" inputmode="decimal" autocomplete="off"
+        value="${esc(val)}" ${isGiven || q.done ? "readonly" : ""} ${isAsk && !q.done ? `placeholder="?"` : ""}
+        aria-label="${esc(t.lvlText(L))} — ${t.cal}${isGiven ? " (" + t.eGiven + ")" : isAsk ? " (" + t.eYourAnswer + ")" : ""}"></td>
+      <td class="tag">${isGiven ? `<span class="chip-given">${t.eGiven}</span>` : isAsk ? `<span class="chip-ask">${t.eYourAnswer}</span>` : ""}</td>
+    </tr>`;
+  }
+  h += `<article class="card ${q.solved ? "solved" : ""} ${q.flash ? "flash-" + q.flash : ""}" id="qcard">
+    <div class="card-head"><h2>${t.qEnergy}</h2>
+      <div class="head-tools">
+      <button type="button" class="speak" id="speak-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>${t.read}</button>
+      </div></div>
+    <p class="qtext">${qMain}</p>
+    <p class="qsub">${qSub}</p>
+    <div class="egrid-wrap">
+      <table class="egrid">
+        <thead><tr><th>${t.level}</th><th>${t.cal}</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div class="e-rule" aria-hidden="true">
+        <div class="e-up"><span class="e-arrow">↑</span><span class="e-dec">370<b>.</b> → 37<b>.</b>0</span><small>${t.eUpWord}</small></div>
+        <div class="e-down"><span class="e-arrow">↓</span><span class="e-dec">3<b>.</b>7 → 37<b>.</b></span><small>${t.eDownWord}</small></div>
+      </div>
+    </div>
+    <div class="answer-row">
+      ${q.done ? "" : `<button type="button" class="btn" id="e-check">${t.eCheck}</button>`}
+      ${q.done ? `<button type="button" class="btn" id="next-btn">${t.eAnother}</button>` : ""}
+    </div>
+    <p class="feedback ${q.fb ? q.fb.cls : ""}" role="status">${q.fb ? q.fb.html : ""}</p>
+    ${q.revealed ? energyExplanation(q) : ""}
+  </article>`;
+  main.innerHTML = h;
+  q.flash = null;
+  // wiring
+  main.querySelectorAll(".ecell").forEach((el) => {
+    const L = +el.dataset.level;
+    el.addEventListener("input", () => { q.cells[L] = el.value; delete q.marks[L]; el.classList.remove("ok", "bad"); });
+    el.addEventListener("focus", () => (state.lastCell = L));
+    el.addEventListener("keydown", (e) => { if (e.key === "Enter") checkEnergy(); });
+  });
+  const ck = $("e-check"); if (ck) ck.addEventListener("click", checkEnergy);
+  const nb = $("next-btn"); if (nb) nb.addEventListener("click", newQuestion);
+  const nt = $("new-test"); if (nt) nt.addEventListener("click", () => { state.streak = 0; state.passed = false; newQuestion(); });
+  $("speak-btn").addEventListener("click", speak);
+}
+
+const eParse = (s) => { const raw = String(s || "").trim().replace(/[,\s]/g, ""); return raw === "" ? null : Number(raw); };
+const eSame = (a, b) => Math.abs(a - b) <= Math.max(1e-9, Math.abs(b) * 1e-6);
+
+function checkEnergy() {
+  const q = state.q, t = tx();
+  if (q.done) return;
+  const ans = eParse(q.cells[q.askLevel]);
+  if (ans === null || !isFinite(ans)) {
+    q.fb = { cls: "bad", html: t.eNeedAnswer }; renderEnergy();
+    const el = $(`ecell-${q.askLevel}`); if (el) el.focus();
+    return;
+  }
+  q.tries++;
+  // Mark every box the student filled: green if it fits the 10% rule, red if not
+  q.marks = {};
+  for (let L = 0; L <= E_ROWS; L++) {
+    if (L === q.givenLevel) continue;
+    const v = eParse(q.cells[L]);
+    if (v !== null) q.marks[L] = isFinite(v) && eSame(v, eValueAt(q, L)) ? "ok" : "bad";
+  }
+  if (eSame(ans, q.answer)) {
+    q.solved = true; q.done = true; q.flash = "good";
+    if (q.firstTry === null) q.firstTry = true;
+    q.fb = { cls: "good", html: t.correct };
+    let passedNow = false;
+    if (state.mode === "test") { state.streak++; if (state.streak >= 1 && !state.passed) { state.passed = true; passedNow = true; } }
+    renderEnergy();
+    confetti(passedNow);
+    energyPopup(true, passedNow, "");
+    return;
+  }
+  if (q.firstTry === null) q.firstTry = false;
+  q.flash = "bad";
+  const hint = energyHint(q, ans);
+  if (state.mode === "test") {
+    // Test: one try, then the answer is shown
+    state.streak = 0; q.done = true; q.revealed = true; revealEnergy(q);
+    q.fb = { cls: "bad", html: `${t.popWrong}. ${t.testMiss}` };
+    renderEnergy();
+    energyPopup(false, false, hint);
+  } else {
+    q.fb = { cls: "bad", html: `${t.wrong}${hint ? `<span class="hint">${hint}</span>` : ""}` };
+    renderEnergy();
+    energyPopup(false, false, hint);
+  }
+}
+
+// A wrong answer that matches a common mistake gets a specific hint
+function energyHint(q, ans) {
+  const t = tx();
+  for (let L = 0; L <= E_ROWS; L++) {
+    if (L !== q.askLevel && eSame(ans, eValueAt(q, L))) {
+      return fill(t.eHintOtherLevel, { lvl: esc(t.lvlText(L)), ask: esc(t.lvlText(q.askLevel)) });
+    }
+  }
+  if (eSame(ans, q.given) ) return t.eHintSame;
+  return t.eHintGeneral;
+}
+
+function revealEnergy(q) {
+  const lo = Math.min(q.givenLevel, q.askLevel), hi = Math.max(q.givenLevel, q.askLevel);
+  for (let L = lo; L <= hi; L++) if (L !== q.givenLevel) { q.cells[L] = fmtNum(eValueAt(q, L)); q.marks[L] = "ok"; }
+}
+
+function energyExplanation(q) {
+  const t = tx();
+  const k = Math.abs(q.askLevel - q.givenLevel), up = q.askLevel > q.givenLevel;
+  const steps = [];
+  const dir = up ? 1 : -1;
+  for (let i = 0, L = q.givenLevel; i <= k; i++, L += dir) steps.push(fmtNum(eValueAt(q, L)));
+  return `<div class="expl"><h3>${t.explTitle}</h3>
+    <p>${fill(t.eExplLevels, { a: q.givenLevel, b: q.askLevel, k })} ${up ? fill(t.calUpWork, { k }) : fill(t.calDownWork, { k })}</p>
+    <p class="chain">${steps.join(" → ")}</p>
+    <p><strong>${t.answerIs} ${fmtNum(q.answer)} ${t.calories}</strong></p></div>`;
+}
+
+function energyPopup(good, passed, hint) {
+  const q = state.q, t = tx(), box = $("popup");
+  let body = "";
+  if (good) body += `<p class="pop-ans">${fmtNum(q.answer)} ${t.calories}</p>`;
+  else if (state.mode === "test") body += `<p>${t.youChose} <strong>${fmtNum(eParse(q.cells[q.askLevel]))}</strong></p><p class="pop-ans">${t.answerIs} ${fmtNum(q.answer)} ${t.calories}</p>`;
+  if (!good && hint) body += `<p>${hint}</p>`;
+  if (state.mode === "test") body += `<p>${passed ? t.pass : good ? "" : t.testMiss}</p>`;
+  let btns;
+  if (good) {
+    btns = passed ? `<button type="button" class="btn" id="pop-newtest">${t.popNewTest}</button>` : `<button type="button" class="btn" id="pop-new">${t.eAnother}</button>`;
+    btns += `<button type="button" class="btn ghost" id="pop-close">${t.eBack}</button>`;
+  } else if (state.mode === "test") {
+    btns = `<button type="button" class="btn" id="pop-new">${t.eAnother}</button><button type="button" class="btn ghost" id="pop-close">${t.eBack}</button>`;
+  } else {
+    btns = `<button type="button" class="btn" id="pop-close">${t.eTryAgain}</button>
+            <button type="button" class="btn ghost" id="pop-show">${t.eShowAnswer}</button>
+            <button type="button" class="btn ghost" id="pop-new">${t.eAnother}</button>`;
+  }
+  box.innerHTML = `<div class="pop-back" id="pop-back">
+    <div class="pop ${good ? "good" : "bad"}" role="dialog" aria-modal="true" aria-labelledby="pop-title">
+      <div class="pop-icon" aria-hidden="true">${good ? "✓" : "✗"}</div>
+      <h2 id="pop-title">${good ? t.correct : state.mode === "test" ? t.popWrong : t.eTryTitle}</h2>
+      ${body}<div class="pop-btns">${btns}</div></div></div>`;
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  function close() {
+    box.innerHTML = ""; document.removeEventListener("keydown", onKey);
+    // after "Try again", put the cursor back in the orange answer box
+    const el = !state.q.done ? $(`ecell-${state.q.askLevel}`) : $("next-btn");
+    if (el) { el.focus(); if (el.select) el.select(); }
+  }
+  document.addEventListener("keydown", onKey);
+  $("pop-close").addEventListener("click", close);
+  $("pop-back").addEventListener("click", (e) => { if (e.target.id === "pop-back") close(); });
+  const pn = $("pop-new"); if (pn) pn.addEventListener("click", () => { box.innerHTML = ""; document.removeEventListener("keydown", onKey); newQuestion(); });
+  const pt = $("pop-newtest"); if (pt) pt.addEventListener("click", () => { box.innerHTML = ""; document.removeEventListener("keydown", onKey); state.streak = 0; state.passed = false; newQuestion(); });
+  const ps = $("pop-show"); if (ps) ps.addEventListener("click", () => {
+    box.innerHTML = ""; document.removeEventListener("keydown", onKey);
+    q.done = true; q.revealed = true; revealEnergy(q);
+    q.fb = { cls: "bad", html: t.eShownNote };
+    renderEnergy();
+  });
+  const firstBtn = box.querySelector(".pop-btns .btn"); if (firstBtn) firstBtn.focus();
+}
+
+/* =====================================================================
    FOOD WEB DETECTIVE — app logic
    Big ideas:
    • An organism's LEVEL = number of arrows on the LONGEST path back to a producer
      (producer = 0). This matches "look for the highest possible level."
-   • CALORIES use the same levels and the 10% rule: up one level = ÷10, down one level = ×10.
+   • CALORIES use the same levels and the 10% rule: up one level = decimal 1 place left, down = 1 place right.
    • DIET TYPE is read from the arrows pointing INTO the organism in THIS web:
      none = Producer, only producers = Herbivore, only animals = Carnivore, both = Omnivore.
    • The picture is laid out fresh (randomly) every time, so students can't memorize
@@ -1180,7 +1528,7 @@ try {
   const saved = JSON.parse(localStorage.getItem("fw-prefs") || "{}");
   if (T[saved.lang]) state.lang = saved.lang;
   if (["easy", "medium", "hard"].includes(saved.diff)) state.diff = saved.diff;
-  if (["level", "cal", "diet"].includes(saved.qtype)) state.qtype = saved.qtype;
+  if (["level", "cal", "diet", "energy"].includes(saved.qtype)) state.qtype = saved.qtype;
 } catch (e) { /* storage blocked: use defaults */ }
 function savePrefs() { try { localStorage.setItem("fw-prefs", JSON.stringify({ lang: state.lang, diff: state.diff, qtype: state.qtype })); } catch (e) {} }
 
@@ -1193,6 +1541,7 @@ function weightedPick(items, weightFn) {
 }
 
 function newQuestion() {
+  if (state.qtype === "energy") { newEnergyQuestion(); return; }   // chart problems, no food web
   const pool = ALL_WEBS.filter((w) => (state.mode === "test" ? w.diff !== "easy" : w.diff === state.diff));
   const web = pick(pool.length > 1 ? pool.filter((w) => w.id !== state.lastWebId) : pool);
   state.lastWebId = web.id;
@@ -1279,7 +1628,10 @@ function questionParts(q, plain) {
   const n = plain ? fmtNum(q.given) : `<span class="num">${fmtNum(q.given)}</span>`;
   const anchorIsProd = q.web.level[q.anchor] === 0;
   const key = q.dir === "up" ? (anchorIsProd ? "calUpProd" : "calUp") : (anchorIsProd ? "calDownProd" : "calDown");
-  return [fill(t[key], { o, a, n }), t.calSub];
+  // Tell students the starting organism's level (the one whose calories are given); they find the other level.
+  const startLevel = q.web.level[q.dir === "up" ? q.anchor : q.target];
+  const lvl = plain ? t.lvlText(startLevel) : `<strong>${esc(t.lvlText(startLevel))}</strong>`;
+  return [fill(t[key], { o, a, n, lvl }), t.calSub];
 }
 
 // ---------- Drawing the food web (SVG) ----------
@@ -1404,8 +1756,7 @@ function explanationHTML(q) {
       return `<tr class="${hl ? "hl" : ""}"><td class="n">${lvl}</td><td>${esc(nm(id))}</td><td class="n">${fmtNum(cal)}</td></tr>`;
     }).join("");
     h += `<table><thead><tr><th>${t.level}</th><th>${t.organism}</th><th>${t.cal}</th></tr></thead><tbody>${rows}</tbody></table>`;
-    const ops = q.dir === "up" ? `${fmtNum(q.given)} ÷ ${fmtNum(10 ** q.k)}` : `${fmtNum(q.given)} × ${fmtNum(10 ** q.k)}`;
-    h += `<p><strong>${ops} = ${fmtNum(q.answer)} ${t.calories}</strong></p>`;
+    h += `<p><strong>${fmtNum(q.given)} → ${fmtNum(q.answer)} ${t.calories}</strong></p>`;
   } else {
     const fs = web.foods[q.target];
     if (!fs.length) h += `<p>${fill(t.eatsNothing, { o: esc(nm(q.target)) })}</p>`;
@@ -1446,11 +1797,11 @@ function render() { renderChrome(); renderMain(); }
 function renderMain() {
   const q = state.q, t = tx(), main = $("main");
   if (!q) return;
+  if (q.type === "energy") { renderEnergy(); return; }
   const [qMain, qSub] = questionParts(q, false);
   let h = "";
   if (state.mode === "test") {
     h += `<div class="banner ${state.passed ? "win" : ""} streak">${state.passed ? t.pass : t.testIntro}
-      <span>${t.streak}</span><span class="dots" aria-label="${state.streak} / 2">${[0, 1].map((i) => `<span class="dot ${i < state.streak ? "on" : ""}"></span>`).join("")}</span>
       ${state.passed ? `<button type="button" class="btn small" id="new-test">${t.newTest}</button>` : ""}</div>`;
   }
   h += `<article class="card ${q.solved ? "solved" : ""} ${q.flash ? "flash-" + q.flash : ""}" id="qcard">
@@ -1557,6 +1908,7 @@ function wireMain() {
   const inp = $("cal-in");
   if (inp) {
     inp.addEventListener("input", () => (q.input = inp.value));
+    inp.addEventListener("focus", () => (state.calTarget = "cal-in"));
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") checkCalories(); });
   }
   const cc = $("cal-check"); if (cc) cc.addEventListener("click", checkCalories);
@@ -1619,7 +1971,7 @@ function checkAnswer(ans) {
     let passedNow = false;
     if (state.mode === "test") {
       state.streak++;
-      if (state.streak >= 2 && !state.passed) { state.passed = true; passedNow = true; }
+      if (state.streak >= 1 && !state.passed) { state.passed = true; passedNow = true; }
     }
     renderMain();
     confetti(passedNow);                                  // every correct answer gets confetti; passing a test gets the big one
@@ -1666,7 +2018,7 @@ function showPopup(good, passed) {
     body += `<p>${t.youChose} <strong>${esc(answerText(q, q.lastPick))}</strong></p>`;
     body += `<p class="pop-ans">${t.answerIs} ${esc(answerText(q, q.answer))}</p>`;
   }
-  if (state.mode === "test") body += `<p>${passed ? t.pass : good ? fill(t.streakNow, { n: state.streak }) : t.testMiss}</p>`;
+  if (state.mode === "test") body += `<p>${passed ? t.pass : good ? "" : t.testMiss}</p>`;
   const primary = passed ? `<button type="button" class="btn" id="pop-newtest">${t.popNewTest}</button>`
                          : `<button type="button" class="btn" id="pop-new">${t.popNew}</button>`;
   const second = `<button type="button" class="btn ghost" id="pop-close">${good ? t.popBack : t.popWhy}</button>`;
@@ -1716,7 +2068,7 @@ function speak() {
   const t = tx();
   if (!("speechSynthesis" in window)) return;
   speechSynthesis.cancel();
-  const [a, b] = questionParts(state.q, true);
+  const [a, b] = state.q.type === "energy" ? energyParts(state.q, true) : questionParts(state.q, true);
   const u = new SpeechSynthesisUtterance(`${a} ${b}`);
   u.lang = t.speechLang; u.rate = 0.9;
   const voices = speechSynthesis.getVoices(), prefix = t.speechLang.slice(0, 2);
@@ -1774,7 +2126,18 @@ function renderCalc() {
 }
 function useCalcResult() {
   const val = calc.result !== null && calc.result !== "Error" ? calcFormat(calc.result) : calc.expr;
-  if (!val || !/^-?\d*\.?\d+$/.test(val) || !state.q || state.q.type !== "cal") return;
+  if (!val || !/^-?\d*\.?\d+$/.test(val) || !state.q) return;
+  if (state.q.type === "energy") {                       // put it in the chart box clicked last (or the orange box)
+    const L = state.lastCell !== undefined && state.lastCell !== state.q.givenLevel ? state.lastCell : state.q.askLevel;
+    const el = $(`ecell-${L}`);
+    if (el && !el.readOnly) { el.value = val; state.q.cells[L] = val; el.focus(); }
+    return;
+  }
+  if (state.q.type !== "cal") return;
+  const tgt = state.calTarget && $(state.calTarget);
+  if (tgt && tgt.classList.contains("scell")) {           // last clicked a scratch-chart box
+    tgt.value = val; state.q.scratch[tgt.dataset.level] = val; tgt.focus(); return;
+  }
   state.q.input = val;
   const el = $("cal-in"); if (el && !el.disabled) { el.value = val; el.focus(); }
 }
@@ -1811,16 +2174,38 @@ function confetti(big) {
   })(start);
 }
 
+// ---------- Scratch chart (Food web energy transfer helper, not graded) ----------
+// Rows from the web's highest level down to 0. Students may type anything; nothing here is checked.
+// What they type is kept in state.q.scratch so it survives re-drawing, and cleared with each new question.
+function renderScratch() {
+  const t = tx(), q = state.q, card = $("scratch-card");
+  card.hidden = !q || q.type !== "cal";
+  if (card.hidden) return;
+  q.scratch = q.scratch || {};
+  const top = Math.max(q.web.maxLevel, 1);
+  let rows = "";
+  for (let L = top; L >= 0; L--) {
+    rows += `<tr><th scope="row"><span class="lv-big">${L}</span><span class="lv-small">${esc(L === 0 ? t.P : t.lvlSmall(L))}</span></th>
+      <td><input class="scell" id="scell-${L}" data-level="${L}" type="text" inputmode="decimal" autocomplete="off" value="${esc(q.scratch[L] || "")}" aria-label="${esc(t.lvlText(L))}"></td></tr>`;
+  }
+  $("scratch-body").innerHTML = rows;
+  $("scratch-body").querySelectorAll(".scell").forEach((el) => {
+    el.addEventListener("input", () => (q.scratch[el.dataset.level] = el.value));
+    el.addEventListener("focus", () => (state.calTarget = el.id));
+  });
+}
+$("scratch-clear").addEventListener("click", () => { if (state.q) { state.q.scratch = {}; renderScratch(); } });
+
 // ---------- Settings bar, key, footer ----------
 function renderChrome() {
   const t = tx();
   document.documentElement.lang = state.lang;
   $("t-tagline").textContent = t.tagline;
   $("t-mode").textContent = t.mode; $("mode-practice").textContent = t.practice; $("mode-test").textContent = t.test;
-  $("t-qtype").textContent = t.qtype; $("q-level").textContent = t.qLevel; $("q-cal").textContent = t.qCal; $("q-diet").textContent = t.qDiet;
-  $("t-diff").textContent = t.diff; $("d-easy").textContent = t.easy; $("d-medium").textContent = t.medium; $("d-hard").textContent = t.hard;
+  $("t-qtype").textContent = t.qtype; $("q-level").textContent = t.qLevel; $("q-cal").textContent = t.qCal; $("q-diet").textContent = t.qDiet; $("q-energy").textContent = t.qEnergy;
+  $("t-diff").textContent = state.qtype === "energy" ? t.eDiff : t.diff; $("d-easy").textContent = t.easy; $("d-medium").textContent = t.medium; $("d-hard").textContent = t.hard;
   $("t-lang").textContent = t.lang; $("t-help").textContent = t.help; $("key-toggle").textContent = t.key;
-  $("new-q").textContent = t.newQ;
+  $("new-q").textContent = state.qtype === "energy" ? t.eAnother : t.newQ;
   const press = (sel, attr, val) => document.querySelectorAll(sel).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset[attr] === String(val))));
   press("#seg-mode button", "mode", state.mode);
   press("#seg-qtype button", "qtype", state.qtype);
@@ -1846,9 +2231,12 @@ function renderChrome() {
     <table><tbody>${[0, 1, 2, 3].map((n) => `<tr><td>${t.lvlText(n)}</td><td class="n">${fmtNum(10000 / 10 ** n)}</td></tr>`).join("")}</tbody></table>`;
 
   // Calculator only for calorie questions
-  $("calc-card").hidden = state.qtype !== "cal";
-  document.querySelector(".wrap").classList.toggle("noside", $("calc-card").hidden && $("key-card").hidden);
+  $("calc-card").hidden = state.qtype !== "cal" && state.qtype !== "energy";
+  document.querySelector(".wrap").classList.toggle("noside", $("calc-card").hidden && $("key-card").hidden && state.qtype !== "cal");
   $("t-calc").textContent = t.calc; $("t-usetip").textContent = t.useTip;
+  $("t-scratch").textContent = t.scratch; $("t-scratchtip").textContent = t.scratchTip;
+  $("t-scratchrule").textContent = t.scratchRule; $("scratch-clear").textContent = t.scratchClear;
+  renderScratch();
   buildCalc();
 
   // Footer with sources
